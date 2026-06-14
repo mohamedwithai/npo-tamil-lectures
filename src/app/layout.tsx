@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Tamil, Amiri } from "next/font/google";
+import { Inter, Noto_Sans_Tamil } from "next/font/google";
+import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -11,10 +12,10 @@ const notoTamil = Noto_Sans_Tamil({
   variable: "--font-tamil",
   display: "swap",
 });
-// Amiri is a clean, free Arabic typeface for Quran verses.
-const amiri = Amiri({
-  subsets: ["arabic"],
-  weight: ["400", "700"],
+// KFGQPC Uthmanic Hafs (v18) — the King Fahd Complex mushaf script used by
+// quran.com for Uthmani Unicode text. Self-hosted from /public/fonts.
+const uthmanicHafs = localFont({
+  src: "../../public/fonts/uthmanic-hafs.woff2",
   variable: "--font-arabic",
   display: "swap",
 });
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ta" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${notoTamil.variable} ${amiri.variable} font-sans`}
+        className={`${inter.variable} ${notoTamil.variable} ${uthmanicHafs.variable} font-sans`}
       >
         <Providers>
           <div className="flex min-h-screen flex-col">

@@ -24,7 +24,7 @@ export function QuranVerse({ verse }: { verse: QuranVerseData }) {
         </span>
       </div>
       <div className="space-y-4 p-6">
-        <p className="arabic-text text-right text-2xl font-bold leading-loose text-foreground sm:text-3xl">
+        <p className="arabic-text text-right text-3xl text-foreground sm:text-4xl">
           {verse.arabicText}
         </p>
         <figcaption className="font-tamil text-base leading-relaxed text-muted-foreground">
