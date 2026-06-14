@@ -1,0 +1,259 @@
+// ───────────────────────────────────────────────────────────────────────────
+// NPO Tamil Lecture Platform — Prisma schema
+// DB: Neon Postgres (free tier). Uses pooled DATABASE_URL at runtime and a
+// DIRECT_URL for migrations. Full-text search uses a `searchVector` tsvector
+// column kept up to date by a trigger (see prisma/fts.sql).
+// ───────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Roles ──────────────────────────────────────────────────────────────────
+// Modeled as an enum (not a join table) deliberately: an NPO with three fixed
+// roles benefits more from the simplicity + referential safety of an enum than
+// from a configurable role table. See docs/ARCHITECTURE.md.
+enum Role {
+  VISITOR // not persisted on a row normally; represents an unauthenticated user
+  MEMBER
+  ADMIN
+}
+
+enum LectureStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// Append-only analytics event kinds. No heartbeat tracking.
+enum EventType {
+  lecture_opened
+  lecture_completed
+  scroll_25
+  scroll_50
+  scroll_75
+  scroll_100
+  quiz_started
+  quiz_completed
+  login
+}
+
+// ─── Auth.js (NextAuth) core + app User ──────────────────────────────────────
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(MEMBER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  lectures      Lecture[]      @relation("AuthoredLectures")
+  quizAttempts  QuizAttempt[]
+  events        Event[]
+  progress      ReadingProgress[]
+
+  @@index([role])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Lectures ─────────────────────────────────────────────────────────────────
+model Lecture {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  titleTa       String // Tamil title (required)
+  titleEn       String? // optional English title
+  summary       String        @db.Text
+  // Rich text content stored as Tiptap-serialized HTML.
+  content       String        @db.Text
+  // Plain-text projection of `content`, used to compute the 30% gate split and
+  // to feed full-text search without HTML noise.
+  contentText   String        @db.Text @default("")
+  featuredImage String?
+  youtubeUrl    String?
+  mindMapImage  String?
+  readTime      Int           @default(0) // estimated minutes
+  status        LectureStatus @default(DRAFT)
+  featured      Boolean       @default(false)
+  views         Int           @default(0)
+  publishedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  authorId String?
+  author   User?   @relation("AuthoredLectures", fields: [authorId], references: [id], onDelete: SetNull)
+
+  verses   LectureVerse[]
+  quiz     Quiz?
+  events   Event[]
+  progress ReadingProgress[]
+
+  // Maintained by a Postgres trigger over (titleTa, titleEn, summary, contentText).
+  searchVector Unsupported("tsvector")?
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([featured])
+  @@index([searchVector], type: Gin)
+}
+
+// ─── Quran verses + many-to-many link to lectures ─────────────────────────────
+model QuranVerse {
+  id          String         @id @default(cuid())
+  surahName   String
+  surahNumber Int?
+  verseNumber Int
+  arabicText  String         @db.Text
+  tamilText   String         @db.Text // Tamil translation
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  lectures LectureVerse[]
+
+  @@unique([surahName, verseNumber])
+  @@index([surahNumber, verseNumber])
+}
+
+model LectureVerse {
+  lectureId String
+  verseId   String
+  order     Int     @default(0)
+
+  lecture Lecture    @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  verse   QuranVerse @relation(fields: [verseId], references: [id], onDelete: Cascade)
+
+  @@id([lectureId, verseId])
+  @@index([verseId])
+}
+
+// ─── Quizzes ──────────────────────────────────────────────────────────────────
+model Quiz {
+  id        String         @id @default(cuid())
+  lectureId String         @unique
+  title     String         @default("Test Your Understanding")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  lecture   Lecture        @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+}
+
+model QuizQuestion {
+  id          String   @id @default(cuid())
+  quizId      String
+  order       Int      @default(0)
+  text        String   @db.Text
+  // Options stored as a JSON string array, e.g. ["A","B","C","D"].
+  options     Json
+  // Zero-based index into `options`.
+  correct     Int
+  explanation String?  @db.Text
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  quizId    String
+  userId    String
+  score     Int // number correct
+  total     Int // number of questions
+  createdAt DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One completed attempt per user per quiz -> "do not show again after completion".
+  @@unique([quizId, userId])
+  @@index([userId])
+}
+
+// ─── Reading progress (member feature: save reading progress) ─────────────────
+model ReadingProgress {
+  userId     String
+  lectureId  String
+  percent    Int      @default(0) // 0..100 furthest scroll reached
+  completed  Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lecture Lecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lectureId])
+  @@index([lectureId])
+}
+
+// ─── Analytics events (append-only) ───────────────────────────────────────────
+model Event {
+  id        String    @id @default(cuid())
+  type      EventType
+  userId    String?
+  lectureId String?
+  // Optional small JSON payload (e.g. quiz score). Kept tiny on purpose.
+  meta      Json?
+  createdAt DateTime  @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lecture Lecture? @relation(fields: [lectureId], references: [id], onDelete: SetNull)
+
+  @@index([type, createdAt])
+  @@index([lectureId, type])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// ─── Key/value settings (site config) ─────────────────────────────────────────
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

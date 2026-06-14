@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 99%;
+    --foreground: 20 14% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14% 12%;
+    --primary: 158 64% 30%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 20% 94%;
+    --secondary-foreground: 20 14% 18%;
+    --muted: 40 20% 94%;
+    --muted-foreground: 20 8% 42%;
+    --accent: 158 40% 92%;
+    --accent-foreground: 158 64% 22%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 12% 88%;
+    --input: 30 12% 88%;
+    --ring: 158 64% 30%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 20 14% 8%;
+    --foreground: 40 20% 92%;
+    --card: 20 14% 11%;
+    --card-foreground: 40 20% 92%;
+    --popover: 20 14% 11%;
+    --popover-foreground: 40 20% 92%;
+    --primary: 158 56% 48%;
+    --primary-foreground: 20 14% 8%;
+    --secondary: 20 10% 16%;
+    --secondary-foreground: 40 20% 92%;
+    --muted: 20 10% 16%;
+    --muted-foreground: 30 8% 62%;
+    --accent: 158 30% 18%;
+    --accent-foreground: 158 56% 70%;
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 20 8% 20%;
+    --input: 20 8% 22%;
+    --ring: 158 56% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Medium-style reading typography for lecture content. */
+.prose-lecture {
+  @apply text-[1.18rem] leading-[1.9] text-foreground/90;
+  font-family: var(--font-tamil), var(--font-inter), sans-serif;
+}
+.prose-lecture p {
+  @apply mb-6;
+}
+.prose-lecture h2 {
+  @apply mt-10 mb-4 text-2xl font-bold tracking-tight text-foreground;
+}
+.prose-lecture h3 {
+  @apply mt-8 mb-3 text-xl font-semibold text-foreground;
+}
+.prose-lecture ul {
+  @apply mb-6 list-disc space-y-2 pl-6;
+}
+.prose-lecture ol {
+  @apply mb-6 list-decimal space-y-2 pl-6;
+}
+.prose-lecture blockquote {
+  @apply my-6 border-l-4 border-primary/40 pl-5 italic text-muted-foreground;
+}
+.prose-lecture a {
+  @apply text-primary underline underline-offset-2;
+}
+.prose-lecture mark,
+mark {
+  @apply rounded bg-primary/20 px-0.5 text-foreground;
+}
+
+/* Arabic Quran text */
+.arabic-text {
+  font-family: var(--font-arabic), serif;
+  direction: rtl;
+  line-height: 2.2;
+}
+
+/* Reading progress bar */
+.reading-progress {
+  @apply fixed left-0 top-0 z-50 h-1 bg-primary transition-[width] duration-150;
+}
