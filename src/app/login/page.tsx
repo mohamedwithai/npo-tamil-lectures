@@ -28,6 +28,28 @@ export default async function LoginPage({
         <div className="mt-6">
           <LoginButton callbackUrl={callbackUrl || "/"} />
         </div>
+
+        {process.env.NODE_ENV !== "production" && (
+          <div className="mt-6 space-y-2 rounded-lg border border-dashed p-3 text-left">
+            <p className="text-xs font-semibold text-muted-foreground">
+              Local dev only (no Google)
+            </p>
+            <div className="flex flex-col gap-2">
+              <a
+                href="/dev-login"
+                className="rounded-md bg-secondary px-3 py-1.5 text-center text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
+              >
+                Continue as Dev Admin
+              </a>
+              <a
+                href="/dev-login?role=MEMBER"
+                className="rounded-md border px-3 py-1.5 text-center text-sm font-medium hover:bg-muted"
+              >
+                Continue as Dev Member
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

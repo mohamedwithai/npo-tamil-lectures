@@ -8,6 +8,7 @@ import {
   BookMarked,
   ListChecks,
   BarChart3,
+  MessageSquareWarning,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,10 +17,11 @@ const items = [
   { href: "/admin/lectures", label: "Lectures", icon: FileText },
   { href: "/admin/quran", label: "Quran Verses", icon: BookMarked },
   { href: "/admin/quizzes", label: "Quizzes", icon: ListChecks },
+  { href: "/admin/suggestions", label: "Suggestions", icon: MessageSquareWarning },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ newSuggestions = 0 }: { newSuggestions?: number }) {
   const pathname = usePathname();
   return (
     <aside className="md:w-56 md:shrink-0">
@@ -41,6 +43,16 @@ export function AdminSidebar() {
             >
               <item.icon className="h-4 w-4" />
               {item.label}
+              {item.href === "/admin/suggestions" && newSuggestions > 0 && (
+                <span
+                  className={cn(
+                    "ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
+                    active ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
+                  )}
+                >
+                  {newSuggestions}
+                </span>
+              )}
             </Link>
           );
         })}

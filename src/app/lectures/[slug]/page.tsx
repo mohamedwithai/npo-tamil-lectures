@@ -6,12 +6,14 @@ import { getLectureBySlug, getAllPublishedSlugs } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { splitContentForGate } from "@/lib/content";
-import { formatDate } from "@/lib/utils";
+import { formatDate, htmlToText } from "@/lib/utils";
+import { LectureAudio } from "@/components/lecture/lecture-audio";
 import { GatedOverlay } from "@/components/lecture/gated-overlay";
 import { LectureReader } from "@/components/lecture/lecture-reader";
 import { QuranVerseList } from "@/components/quran/quran-verse";
 import { YouTubeEmbed } from "@/components/lecture/youtube-embed";
 import { MindMap } from "@/components/lecture/mind-map";
+import { SuggestableContent } from "@/components/lecture/suggestable-content";
 import type { MindMapNode } from "@/lib/mindmap";
 import type { ClientQuiz } from "@/components/quiz/quiz-modal";
 
@@ -68,6 +70,12 @@ export default async function LecturePage({
   const { preview, hasMore } = splitContentForGate(lecture.content, 0.3);
   const visibleHtml = isMember ? lecture.content : preview;
   const showGate = !isMember && hasMore;
+
+  // Text the read-aloud player will speak — only the VISIBLE portion, so guests
+  // can't hear gated content.
+  const audioText = [lecture.titleTa, lecture.summary, htmlToText(visibleHtml)]
+    .filter(Boolean)
+    .join(". ");
 
   // Quiz: members only, and only if they haven't completed it.
   let clientQuiz: ClientQuiz | null = null;
@@ -135,12 +143,16 @@ export default async function LecturePage({
           {lecture.summary}
         </p>
 
+        <LectureAudio lectureId={lecture.id} text={audioText} />
+
         {lecture.youtubeUrl && <YouTubeEmbed url={lecture.youtubeUrl} />}
 
-        {/* Rendered lecture body. Content is authored by admins via Tiptap. */}
-        <div
-          className="prose-lecture"
-          dangerouslySetInnerHTML={{ __html: visibleHtml }}
+        {/* Rendered lecture body. Content is authored by admins via Tiptap.
+            Members can flag corrections inline (sent to the admin inbox). */}
+        <SuggestableContent
+          html={visibleHtml}
+          lectureId={lecture.id}
+          canSuggest={isMember}
         />
 
         {showGate && <GatedOverlay callbackUrl={callbackUrl} />}

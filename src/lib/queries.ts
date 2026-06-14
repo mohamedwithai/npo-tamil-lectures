@@ -58,6 +58,20 @@ export async function getLectureBySlug(slug: string) {
   });
 }
 
+export async function getSuggestions() {
+  return prisma.suggestion.findMany({
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    include: {
+      lecture: { select: { slug: true, titleTa: true } },
+      user: { select: { name: true, email: true } },
+    },
+  });
+}
+
+export async function getNewSuggestionCount() {
+  return prisma.suggestion.count({ where: { status: "NEW" } });
+}
+
 export async function getAdminLectures() {
   return prisma.lecture.findMany({
     orderBy: { updatedAt: "desc" },

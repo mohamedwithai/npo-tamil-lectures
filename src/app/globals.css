@@ -97,6 +97,18 @@ mark {
   line-height: 2.2;
 }
 
+/* Suggest-a-correction mode: highlight hovered blocks as editable. */
+.suggest-active > * {
+  cursor: pointer;
+  transition: outline-color 0.15s, background-color 0.15s;
+  border-radius: 0.375rem;
+}
+.suggest-active > *:hover {
+  outline: 2px dashed hsl(var(--primary));
+  outline-offset: 4px;
+  background-color: hsl(var(--primary) / 0.06);
+}
+
 /* Reading progress bar */
 .reading-progress {
   @apply fixed left-0 top-0 z-50 h-1 bg-primary transition-[width] duration-150;

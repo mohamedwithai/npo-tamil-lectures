@@ -36,6 +36,13 @@ enum LectureStatus {
   ARCHIVED
 }
 
+// Lifecycle of a reader-submitted correction suggestion.
+enum SuggestionStatus {
+  NEW
+  REVIEWED
+  DISMISSED
+}
+
 // Append-only analytics event kinds. No heartbeat tracking.
 enum EventType {
   lecture_opened
@@ -66,6 +73,7 @@ model User {
   quizAttempts  QuizAttempt[]
   events        Event[]
   progress      ReadingProgress[]
+  suggestions   Suggestion[]
 
   @@index([role])
 }
@@ -142,6 +150,7 @@ model Lecture {
   quiz     Quiz?
   events   Event[]
   progress ReadingProgress[]
+  suggestions Suggestion[]
 
   // Maintained by a Postgres trigger over (titleTa, titleEn, summary, contentText).
   searchVector Unsupported("tsvector")?
@@ -257,6 +266,26 @@ model Event {
   @@index([lectureId, type])
   @@index([userId, createdAt])
   @@index([createdAt])
+}
+
+// ─── Reader-submitted correction suggestions (members only) ───────────────────
+model Suggestion {
+  id            String           @id @default(cuid())
+  lectureId     String
+  userId        String?
+  // The original passage the reader edited, and their proposed correction.
+  originalText  String           @db.Text
+  suggestedText String           @db.Text
+  status        SuggestionStatus @default(NEW)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  lecture Lecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([lectureId])
+  @@index([userId])
 }
 
 // ─── Key/value settings (site config) ─────────────────────────────────────────

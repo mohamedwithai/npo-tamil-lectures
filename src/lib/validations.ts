@@ -85,3 +85,20 @@ export type EventInput = z.infer<typeof eventSchema>;
 export const searchSchema = z.object({
   q: z.string().trim().min(1).max(120),
 });
+
+// ─── Correction suggestion (reader → admin) ───────────────────────────────────
+export const suggestionSchema = z
+  .object({
+    lectureId: z.string().cuid(),
+    originalText: z.string().trim().min(1, "Missing original text").max(2000),
+    suggestedText: z
+      .string()
+      .trim()
+      .min(1, "Please enter your correction")
+      .max(2000),
+  })
+  .refine((d) => d.originalText !== d.suggestedText, {
+    message: "No change detected",
+    path: ["suggestedText"],
+  });
+export type SuggestionInput = z.infer<typeof suggestionSchema>;
