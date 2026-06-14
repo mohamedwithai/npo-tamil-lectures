@@ -12,6 +12,7 @@ import { LectureReader } from "@/components/lecture/lecture-reader";
 import { QuranVerseList } from "@/components/quran/quran-verse";
 import { YouTubeEmbed } from "@/components/lecture/youtube-embed";
 import { MindMap } from "@/components/lecture/mind-map";
+import type { MindMapNode } from "@/lib/mindmap";
 import type { ClientQuiz } from "@/components/quiz/quiz-modal";
 
 // ISR with on-demand revalidation triggered by admin save (revalidatePath).
@@ -147,7 +148,11 @@ export default async function LecturePage({
         {/* Members-only sections below the gate */}
         {isMember && (
           <>
-            {lecture.mindMapImage && <MindMap src={lecture.mindMapImage} alt={lecture.titleTa} />}
+            <MindMap
+              data={lecture.mindMap as MindMapNode | null}
+              src={lecture.mindMapImage}
+              alt={lecture.titleTa}
+            />
             <QuranVerseList verses={verses} />
           </>
         )}

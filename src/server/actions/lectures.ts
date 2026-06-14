@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { lectureSchema } from "@/lib/validations";
 import { htmlToText, estimateReadTime } from "@/lib/utils";
+import { generateMindMap } from "@/lib/gemini";
+import type { MindMapNode } from "@/lib/mindmap";
+import type { Prisma } from "@prisma/client";
 
 export type ActionState = { ok: boolean; error?: string; id?: string };
 
@@ -38,6 +41,15 @@ export async function saveLecture(
   const readTime = estimateReadTime(contentText);
   const publishing = d.status === "PUBLISHED";
 
+  // Auto-generate the NotebookLM-style mind map from the content (Gemini, with a
+  // heading-based fallback). Never blocks the save: on any error we store null.
+  let mindMap: MindMapNode | null = null;
+  try {
+    mindMap = await generateMindMap(d.titleTa, d.content, d.titleEn);
+  } catch {
+    mindMap = null;
+  }
+
   try {
     const data = {
       titleTa: d.titleTa,
@@ -49,6 +61,7 @@ export async function saveLecture(
       featuredImage: d.featuredImage || null,
       youtubeUrl: d.youtubeUrl || null,
       mindMapImage: d.mindMapImage || null,
+      mindMap: (mindMap ?? undefined) as Prisma.InputJsonValue | undefined,
       status: d.status,
       featured: d.featured,
       readTime,
@@ -96,6 +109,27 @@ export async function saveLecture(
         ? "That slug is already in use."
         : "Could not save the lecture.";
     return { ok: false, error: msg };
+  }
+}
+
+/**
+ * Generate (but do not save) a mind map from the current editor content, so the
+ * admin can preview it before publishing. Admin-only.
+ */
+export async function previewMindMap(
+  titleTa: string,
+  content: string,
+  titleEn?: string
+): Promise<{ ok: boolean; mindMap?: MindMapNode; error?: string }> {
+  await requireAdmin();
+  if (!content.trim()) {
+    return { ok: false, error: "Add some content first." };
+  }
+  try {
+    const mindMap = await generateMindMap(titleTa || "Mind Map", content, titleEn);
+    return { ok: true, mindMap };
+  } catch {
+    return { ok: false, error: "Could not generate a mind map." };
   }
 }
 
