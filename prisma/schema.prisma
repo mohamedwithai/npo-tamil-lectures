@@ -123,6 +123,10 @@ model Lecture {
   featuredImage String?
   youtubeUrl    String?
   mindMapImage  String?
+  // Auto-generated NotebookLM-style mind map: a hierarchical { label, children }
+  // tree built from the content on save (Gemini, with a heading-based fallback).
+  // Rendered as an interactive, collapsible graph on the lecture page.
+  mindMap       Json?
   readTime      Int           @default(0) // estimated minutes
   status        LectureStatus @default(DRAFT)
   featured      Boolean       @default(false)
