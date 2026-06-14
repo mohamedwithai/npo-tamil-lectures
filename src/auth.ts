@@ -26,6 +26,10 @@ function adminEmails(): string[] {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  // Trust the deployment host (Vercel / custom domain) so Auth.js builds correct
+  // callback URLs in production and avoids UntrustedHost errors. Safe: the app
+  // runs behind Vercel's proxy.
+  trustHost: true,
   // Database sessions: the adapter persists the session row, so we can revoke
   // and we always read the authoritative role from the DB.
   session: { strategy: "database" },
