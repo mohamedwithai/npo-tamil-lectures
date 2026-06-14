@@ -8,6 +8,10 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearchPostgres"]
+  // "native" is for local dev; "rhel-openssl-3.0.x" is the engine for the
+  // serverless runtime (AWS Lambda / Netlify Functions). Without it, Prisma
+  // throws "query engine not found" at runtime in production.
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

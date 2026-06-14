@@ -1,0 +1,14 @@
+# Netlify deployment config for the Next.js 15 app.
+# The official Next.js runtime plugin handles App Router SSR, server actions,
+# route handlers and ISR. Env vars are set in the Netlify dashboard (Site
+# settings → Environment variables), NOT here.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  # Next.js 15 requires Node 18.18+. Pin a known-good LTS.
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
