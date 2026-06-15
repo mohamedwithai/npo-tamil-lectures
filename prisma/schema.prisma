@@ -260,6 +260,11 @@ model Event {
   lectureId String?
   // Optional small JSON payload (e.g. quiz score). Kept tiny on purpose.
   meta      Json?
+  // Coarse, IP-derived visitor location for analytics (country ISO code +
+  // region/subdivision). Resolved from the host's geo headers at write time;
+  // null when unavailable (e.g. local dev). No precise location is stored.
+  country   String?
+  region    String?
   createdAt DateTime  @default(now())
 
   user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -269,6 +274,7 @@ model Event {
   @@index([lectureId, type])
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@index([country])
 }
 
 // ─── Reader-submitted correction suggestions (members only) ───────────────────

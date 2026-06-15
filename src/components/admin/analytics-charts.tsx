@@ -16,7 +16,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { DashboardData } from "@/lib/analytics";
 
+const regionNames =
+  typeof Intl !== "undefined" && "DisplayNames" in Intl
+    ? new Intl.DisplayNames(["en"], { type: "region" })
+    : null;
+
+function countryName(code: string): string {
+  try {
+    return regionNames?.of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
 export function AnalyticsCharts({ data }: { data: DashboardData }) {
+  const countryData = data.topCountries.map((c) => ({
+    name: countryName(c.country),
+    count: c.count,
+  }));
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -108,6 +125,33 @@ export function AnalyticsCharts({ data }: { data: DashboardData }) {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Visitors by Country</CardTitle>
+        </CardHeader>
+        <CardContent className="h-72">
+          {countryData.length === 0 ? (
+            <Empty />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={countryData} layout="vertical" margin={{ left: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+                <XAxis type="number" fontSize={11} allowDecimals={false} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={130}
+                  fontSize={11}
+                  tickFormatter={(v: string) => (v.length > 18 ? v.slice(0, 18) + "…" : v)}
+                />
+                <Tooltip />
+                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Visitors" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

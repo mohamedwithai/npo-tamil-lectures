@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { eventSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
+import { getRequestGeo } from "@/lib/geo";
 
 /**
  * Record a single analytics event (append-only). Called from the client via a
@@ -21,6 +22,9 @@ export async function recordEvent(input: unknown): Promise<{ ok: boolean }> {
   const limited = await rateLimit(`event:${user?.id ?? "anon"}`, 120, 60);
   if (!limited.success) return { ok: false };
 
+  // Coarse country/region from the host's geo headers (null in local dev).
+  const geo = await getRequestGeo();
+
   try {
     await prisma.event.create({
       data: {
@@ -28,6 +32,8 @@ export async function recordEvent(input: unknown): Promise<{ ok: boolean }> {
         userId: user?.id ?? null,
         lectureId: parsed.data.lectureId ?? null,
         meta: parsed.data.meta ?? undefined,
+        country: geo.country,
+        region: geo.region,
       },
     });
 

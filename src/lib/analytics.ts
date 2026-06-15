@@ -13,6 +13,7 @@ export type DashboardData = {
   mostViewed: { id: string; titleTa: string; slug: string; views: number }[];
   mostCompleted: { titleTa: string; slug: string; completions: number }[];
   activityTimeline: { date: string; events: number; logins: number }[];
+  topCountries: { country: string; count: number }[];
 };
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -60,6 +61,18 @@ export async function getDashboardData(): Promise<DashboardData> {
     })
     .filter(Boolean) as DashboardData["mostCompleted"];
 
+  // Visitor breakdown by country (top 8) from geo-tagged events.
+  const countryGroups = await prisma.event.groupBy({
+    by: ["country"],
+    where: { country: { not: null } },
+    _count: { _all: true },
+    orderBy: { _count: { country: "desc" } },
+    take: 8,
+  });
+  const topCountries = countryGroups
+    .filter((g) => g.country)
+    .map((g) => ({ country: g.country as string, count: g._count._all }));
+
   // 30-day activity timeline aggregated in SQL (date_trunc).
   const timeline = await prisma.$queryRaw<
     { date: Date; events: bigint; logins: bigint }[]
@@ -90,6 +103,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       events: Number(t.events),
       logins: Number(t.logins),
     })),
+    topCountries,
   };
 }
 
@@ -103,7 +117,7 @@ export async function eventsCsv(): Promise<string> {
       lecture: { select: { slug: true } },
     },
   });
-  const header = "createdAt,type,userEmail,lectureSlug,meta";
+  const header = "createdAt,type,userEmail,lectureSlug,country,region,meta";
   const rows = events.map((e) => {
     const meta = e.meta ? JSON.stringify(e.meta).replace(/"/g, '""') : "";
     return [
@@ -111,6 +125,8 @@ export async function eventsCsv(): Promise<string> {
       e.type,
       e.user?.email ?? "",
       e.lecture?.slug ?? "",
+      e.country ?? "",
+      e.region ?? "",
       `"${meta}"`,
     ].join(",");
   });
