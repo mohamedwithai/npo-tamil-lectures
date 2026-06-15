@@ -3,9 +3,18 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, Calendar } from "lucide-react";
-import { getArticleBySlug, getAllPublishedArticleSlugs } from "@/lib/queries";
+import {
+  getArticleBySlug,
+  getAllPublishedArticleSlugs,
+  isBookmarked,
+  getHighlightsFor,
+} from "@/lib/queries";
+import { getCurrentUser } from "@/lib/session";
 import { getCategory } from "@/lib/categories";
 import { formatDate } from "@/lib/utils";
+import { toHighlightData } from "@/lib/highlights";
+import { BookmarkButton } from "@/components/lecture/bookmark-button";
+import { AnnotatableContent } from "@/components/annotation/annotatable-content";
 
 export const revalidate = 1800;
 
@@ -34,6 +43,16 @@ export default async function ArticlePage({
   const article = await getArticleBySlug(slug);
   if (!article) notFound();
 
+  const user = await getCurrentUser();
+  const isMember = !!user;
+  const callbackUrl = `/articles/${slug}`;
+  const bookmarked = isMember
+    ? await isBookmarked(user!.id, "article", article.id)
+    : false;
+  const highlights = isMember
+    ? (await getHighlightsFor(user!.id, "article", article.id)).map(toHighlightData)
+    : [];
+
   const cat = getCategory(article.category);
   const color = cat?.color ?? "#4f46e5";
 
@@ -56,12 +75,21 @@ export default async function ArticlePage({
         <p className="mt-1 text-sm font-medium text-muted-foreground">{article.titleEn}</p>
       )}
 
-      <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
         <span className="flex items-center gap-1">
           <Calendar className="h-4 w-4" /> {formatDate(article.publishedAt)}
         </span>
         <span className="flex items-center gap-1">
           <Clock className="h-4 w-4" /> {article.readTime} min read
+        </span>
+        <span className="ml-auto">
+          <BookmarkButton
+            target="article"
+            id={article.id}
+            initialBookmarked={bookmarked}
+            isMember={isMember}
+            callbackUrl={callbackUrl}
+          />
         </span>
       </div>
 
@@ -79,9 +107,13 @@ export default async function ArticlePage({
         </div>
       )}
 
-      <div
-        className="prose-lecture mt-8"
-        dangerouslySetInnerHTML={{ __html: article.content }}
+      <AnnotatableContent
+        html={article.content}
+        target="article"
+        contentId={article.id}
+        isMember={isMember}
+        highlights={highlights}
+        className="mt-8"
       />
     </article>
   );

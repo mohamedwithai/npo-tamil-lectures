@@ -159,6 +159,59 @@ export async function getAdminArticles() {
   });
 }
 
+// ─── Member: bookmarks & highlights ───────────────────────────────────────────
+export async function isBookmarked(
+  userId: string,
+  target: "lecture" | "article",
+  id: string
+): Promise<boolean> {
+  const b = await prisma.bookmark.findFirst({
+    where:
+      target === "lecture"
+        ? { userId, lectureId: id }
+        : { userId, articleId: id },
+    select: { id: true },
+  });
+  return !!b;
+}
+
+export async function getUserBookmarks(userId: string) {
+  return prisma.bookmark.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      lecture: { select: cardSelect },
+      article: { select: articleCardSelect },
+    },
+  });
+}
+
+export async function getHighlightsFor(
+  userId: string,
+  target: "lecture" | "article",
+  id: string
+) {
+  return prisma.highlight.findMany({
+    where:
+      target === "lecture"
+        ? { userId, lectureId: id }
+        : { userId, articleId: id },
+    orderBy: { startOffset: "asc" },
+  });
+}
+
+/** All of a user's annotated passages (note != "") for the My Notes hub. */
+export async function getUserNotes(userId: string) {
+  return prisma.highlight.findMany({
+    where: { userId, NOT: { note: "" } },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      lecture: { select: { slug: true, titleTa: true } },
+      article: { select: { slug: true, titleTa: true } },
+    },
+  });
+}
+
 export async function getAdminLectures() {
   return prisma.lecture.findMany({
     orderBy: { updatedAt: "desc" },

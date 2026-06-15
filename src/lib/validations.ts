@@ -61,6 +61,36 @@ export const articleSchema = z.object({
 });
 export type ArticleInput = z.infer<typeof articleSchema>;
 
+// ─── Bookmarks & highlights (member features) ─────────────────────────────────
+export const HIGHLIGHT_COLORS = ["yellow", "green", "blue", "pink"] as const;
+
+const contentTarget = {
+  target: z.enum(["lecture", "article"]),
+  id: z.string().cuid(),
+};
+
+export const bookmarkSchema = z.object(contentTarget);
+export type BookmarkInput = z.infer<typeof bookmarkSchema>;
+
+export const highlightCreateSchema = z.object({
+  ...contentTarget,
+  quote: z.string().trim().min(1, "Nothing selected").max(4000),
+  prefix: z.string().max(200).default(""),
+  suffix: z.string().max(200).default(""),
+  startOffset: z.number().int().min(0),
+  endOffset: z.number().int().min(0),
+  color: z.enum(HIGHLIGHT_COLORS).default("yellow"),
+  note: z.string().max(4000).optional().or(z.literal("")),
+});
+export type HighlightCreateInput = z.infer<typeof highlightCreateSchema>;
+
+export const highlightUpdateSchema = z.object({
+  id: z.string().cuid(),
+  note: z.string().max(4000).optional(),
+  color: z.enum(HIGHLIGHT_COLORS).optional(),
+});
+export type HighlightUpdateInput = z.infer<typeof highlightUpdateSchema>;
+
 // ─── Quran verse ──────────────────────────────────────────────────────────────
 export const quranVerseSchema = z.object({
   id: z.string().cuid().optional(),

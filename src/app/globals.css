@@ -113,3 +113,28 @@ mark {
 .reading-progress {
   @apply fixed left-0 top-0 z-50 h-1 bg-primary transition-[width] duration-150;
 }
+
+/* User highlights (annotation engine). Marks are injected into rendered content;
+   `mark.hl*` selectors are specific enough to beat the default `.prose-lecture
+   mark` style above so the highlight colour actually shows (light + dark). */
+mark.hl {
+  color: inherit;
+  border-radius: 0.15rem;
+  padding: 0 0.05em;
+  cursor: pointer;
+  background-color: rgb(250 204 21 / 0.45); /* yellow default */
+}
+mark.hl-green  { background-color: rgb(34 197 94 / 0.42); }
+mark.hl-blue   { background-color: rgb(59 130 246 / 0.42); }
+mark.hl-pink   { background-color: rgb(236 72 153 / 0.42); }
+.dark mark.hl        { background-color: rgb(250 204 21 / 0.34); }
+.dark mark.hl-green  { background-color: rgb(34 197 94 / 0.36); }
+.dark mark.hl-blue   { background-color: rgb(59 130 246 / 0.42); }
+.dark mark.hl-pink   { background-color: rgb(236 72 153 / 0.38); }
+
+/* Colour swatches in the note editor popover. */
+.hl-swatch { cursor: pointer; }
+.hl-swatch.hl-yellow { background-color: rgb(250 204 21 / 0.85); }
+.hl-swatch.hl-green  { background-color: rgb(34 197 94 / 0.85); }
+.hl-swatch.hl-blue   { background-color: rgb(59 130 246 / 0.85); }
+.hl-swatch.hl-pink   { background-color: rgb(236 72 153 / 0.85); }

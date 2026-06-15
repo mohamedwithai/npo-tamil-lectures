@@ -2,8 +2,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Clock, Calendar } from "lucide-react";
-import { getLectureBySlug, getAllPublishedSlugs } from "@/lib/queries";
+import {
+  getLectureBySlug,
+  getAllPublishedSlugs,
+  isBookmarked,
+  getHighlightsFor,
+} from "@/lib/queries";
 import { getCurrentUser } from "@/lib/session";
+import { BookmarkButton } from "@/components/lecture/bookmark-button";
+import { toHighlightData } from "@/lib/highlights";
 import { prisma } from "@/lib/prisma";
 import { splitContentForGate } from "@/lib/content";
 import { formatDate, htmlToText } from "@/lib/utils";
@@ -100,6 +107,12 @@ export default async function LecturePage({
 
   const verses = lecture.verses.map((lv) => lv.verse);
   const callbackUrl = `/lectures/${slug}`;
+  const bookmarked = isMember
+    ? await isBookmarked(user!.id, "lecture", lecture.id)
+    : false;
+  const highlights = isMember
+    ? (await getHighlightsFor(user!.id, "lecture", lecture.id)).map(toHighlightData)
+    : [];
 
   return (
     <LectureReader
@@ -116,12 +129,21 @@ export default async function LecturePage({
           {lecture.titleEn && (
             <p className="mt-2 text-lg text-muted-foreground">{lecture.titleEn}</p>
           )}
-          <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" /> {formatDate(lecture.publishedAt)}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" /> {lecture.readTime} min read
+            </span>
+            <span className="ml-auto">
+              <BookmarkButton
+                target="lecture"
+                id={lecture.id}
+                initialBookmarked={bookmarked}
+                isMember={isMember}
+                callbackUrl={callbackUrl}
+              />
             </span>
           </div>
         </header>
@@ -153,6 +175,7 @@ export default async function LecturePage({
           html={visibleHtml}
           lectureId={lecture.id}
           canSuggest={isMember}
+          highlights={highlights}
         />
 
         {showGate && <GatedOverlay callbackUrl={callbackUrl} />}

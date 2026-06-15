@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { createSuggestion } from "@/server/actions/suggestions";
 import { cn } from "@/lib/utils";
+import { useHighlights } from "@/components/annotation/use-highlights";
+import type { HighlightData } from "@/components/annotation/highlight-utils";
 
 const BLOCK_SELECTOR = "p,li,h1,h2,h3,h4,h5,h6,blockquote";
 
@@ -24,10 +26,12 @@ export function SuggestableContent({
   html,
   lectureId,
   canSuggest,
+  highlights = [],
 }: {
   html: string;
   lectureId: string;
   canSuggest: boolean;
+  highlights?: HighlightData[];
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [active, setActive] = React.useState(false);
@@ -36,6 +40,16 @@ export function SuggestableContent({
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [thanks, setThanks] = React.useState(false);
+
+  // Selection-highlighting + notes, suppressed while "suggest a correction"
+  // mode is active to avoid conflicting click/selection behaviour.
+  const { overlay } = useHighlights({
+    containerRef: ref,
+    target: "lecture",
+    contentId: lectureId,
+    enabled: canSuggest && !active,
+    initial: highlights,
+  });
 
   const onContentClick = React.useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -114,6 +128,8 @@ export function SuggestableContent({
         className={cn("prose-lecture", active && "suggest-active")}
         dangerouslySetInnerHTML={{ __html: html }}
       />
+
+      {overlay}
 
       {/* Editor dialog */}
       <Dialog open={original != null} onOpenChange={(o) => !o && setOriginal(null)}>

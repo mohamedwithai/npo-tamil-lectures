@@ -74,6 +74,8 @@ model User {
   events        Event[]
   progress      ReadingProgress[]
   suggestions   Suggestion[]
+  bookmarks     Bookmark[]
+  highlights    Highlight[]
 
   @@index([role])
 }
@@ -153,6 +155,8 @@ model Lecture {
   events   Event[]
   progress ReadingProgress[]
   suggestions Suggestion[]
+  bookmarks  Bookmark[]
+  highlights Highlight[]
 
   // Maintained by a Postgres trigger over (titleTa, titleEn, summary, contentText).
   searchVector Unsupported("tsvector")?
@@ -337,8 +341,58 @@ model Article {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  bookmarks  Bookmark[]
+  highlights Highlight[]
+
   @@index([status, publishedAt(sort: Desc)])
   @@index([category, status])
+}
+
+// ─── Member: bookmarks (saved lectures / articles) ────────────────────────────
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  lectureId String?
+  articleId String?
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lecture Lecture? @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  article Article? @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  // One bookmark per user per content. Nullable columns store NULL as distinct
+  // in Postgres, so lecture-bookmarks never collide with article-bookmarks.
+  @@unique([userId, lectureId])
+  @@unique([userId, articleId])
+  @@index([userId, createdAt])
+}
+
+// ─── Member: highlights + notes anchored to a passage ─────────────────────────
+model Highlight {
+  id          String   @id @default(cuid())
+  userId      String
+  lectureId   String?
+  articleId   String?
+  // Anchor: the selected text plus surrounding context + char offsets into the
+  // rendered container's textContent, used to re-locate the passage on render.
+  quote       String   @db.Text
+  prefix      String   @db.Text @default("")
+  suffix      String   @db.Text @default("")
+  startOffset Int
+  endOffset   Int
+  color       String   @default("yellow")
+  // Optional note attached to the passage ("" = a plain highlight).
+  note        String   @db.Text @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lecture Lecture? @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  article Article? @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@index([lectureId])
+  @@index([articleId])
 }
 
 // ─── Key/value settings (site config) ─────────────────────────────────────────

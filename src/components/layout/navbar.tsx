@@ -3,7 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { Menu, X, LogIn, LogOut, LayoutDashboard, BookOpen } from "lucide-react";
+import {
+  Menu,
+  X,
+  LogIn,
+  LogOut,
+  LayoutDashboard,
+  BookOpen,
+  Bookmark,
+  StickyNote,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SearchBar } from "@/components/layout/search-bar";
@@ -60,6 +69,16 @@ export function Navbar() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/bookmarks">
+                    <Bookmark className="h-4 w-4" /> Bookmarks
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/notes">
+                    <StickyNote className="h-4 w-4" /> Notes
+                  </Link>
+                </DropdownMenuItem>
                 {user.role === "ADMIN" && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin">
@@ -144,6 +163,24 @@ export function Navbar() {
               </div>
             </div>
 
+            {user && (
+              <>
+                <Link
+                  href="/bookmarks"
+                  className="block rounded-md px-2 py-2 hover:bg-accent"
+                  onClick={() => setOpen(false)}
+                >
+                  Bookmarks
+                </Link>
+                <Link
+                  href="/notes"
+                  className="block rounded-md px-2 py-2 hover:bg-accent"
+                  onClick={() => setOpen(false)}
+                >
+                  Notes
+                </Link>
+              </>
+            )}
             {user?.role === "ADMIN" && (
               <Link
                 href="/admin"
