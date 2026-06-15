@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
+import { CATEGORIES } from "@/lib/categories";
 import {
   saveLecture,
   previewMindMap,
@@ -34,6 +35,7 @@ export type LectureFormData = {
   featuredImage: string;
   youtubeUrl: string;
   mindMapImage: string;
+  category: string;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   featured: boolean;
   verseIds: string[];
@@ -155,7 +157,17 @@ export function LectureForm({
         {mindMap && <MindMap data={mindMap} alt="Preview" />}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field label="Category" hint="Groups the lecture under a topic.">
+          <Select name="category" defaultValue={initial.category}>
+            <option value="">— None —</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.nameTa} ({c.nameEn})
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Field label="Status">
           <Select name="status" defaultValue={initial.status}>
             <option value="DRAFT">Draft</option>

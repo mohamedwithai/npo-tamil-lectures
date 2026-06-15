@@ -10,12 +10,16 @@ import {
   BarChart3,
   MessageSquareWarning,
   Activity,
+  Library,
+  Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/lectures", label: "Lectures", icon: FileText },
+  { href: "/admin/articles", label: "Articles", icon: Newspaper },
+  { href: "/admin/books", label: "Library", icon: Library },
   { href: "/admin/quran", label: "Quran Verses", icon: BookMarked },
   { href: "/admin/quizzes", label: "Quizzes", icon: ListChecks },
   { href: "/admin/suggestions", label: "Suggestions", icon: MessageSquareWarning },

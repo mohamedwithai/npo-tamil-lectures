@@ -10,6 +10,7 @@ const empty: LectureFormData = {
   featuredImage: "",
   youtubeUrl: "",
   mindMapImage: "",
+  category: "",
   status: "DRAFT",
   featured: false,
   verseIds: [],

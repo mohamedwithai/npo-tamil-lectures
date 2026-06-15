@@ -15,11 +15,51 @@ export const lectureSchema = z.object({
   featuredImage: z.string().url().optional().or(z.literal("")),
   youtubeUrl: z.string().url().optional().or(z.literal("")),
   mindMapImage: z.string().url().optional().or(z.literal("")),
+  // Content taxonomy slug (see src/lib/categories.ts). Empty = untagged.
+  category: z.string().max(40).optional().or(z.literal("")),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
   featured: z.boolean().default(false),
   verseIds: z.array(z.string().cuid()).default([]),
 });
 export type LectureInput = z.infer<typeof lectureSchema>;
+
+// ─── Book (library) ───────────────────────────────────────────────────────────
+export const bookSchema = z.object({
+  id: z.string().cuid().optional(),
+  title: z.string().min(1, "Title is required").max(300),
+  titleEn: z.string().max(300).optional().or(z.literal("")),
+  author: z.string().max(200).optional().or(z.literal("")),
+  description: z.string().max(2000).optional().or(z.literal("")),
+  coverImage: z.string().url().optional().or(z.literal("")),
+  pdfUrl: z.string().url().optional().or(z.literal("")),
+  category: z.string().max(40).optional().or(z.literal("")),
+  pages: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.coerce.number().int().min(0).max(100000).optional()
+  ),
+  featured: z.boolean().default(false),
+  published: z.boolean().default(true),
+});
+export type BookInput = z.infer<typeof bookSchema>;
+
+// ─── Article (written piece) ──────────────────────────────────────────────────
+export const articleSchema = z.object({
+  id: z.string().cuid().optional(),
+  titleTa: z.string().min(1, "Tamil title is required").max(300),
+  titleEn: z.string().max(300).optional().or(z.literal("")),
+  slug: z
+    .string()
+    .min(1)
+    .max(80)
+    .regex(/^[\p{L}\p{N}-]+$/u, "Slug may only contain letters, numbers and hyphens"),
+  summary: z.string().min(1, "Summary is required").max(600),
+  content: z.string().min(1, "Content is required"),
+  coverImage: z.string().url().optional().or(z.literal("")),
+  category: z.string().max(40).optional().or(z.literal("")),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
+  featured: z.boolean().default(false),
+});
+export type ArticleInput = z.infer<typeof articleSchema>;
 
 // ─── Quran verse ──────────────────────────────────────────────────────────────
 export const quranVerseSchema = z.object({

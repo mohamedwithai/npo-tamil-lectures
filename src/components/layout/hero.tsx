@@ -9,14 +9,6 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden border-b bg-gradient-to-b from-accent/40 to-background">
       <div className="container py-20 text-center sm:py-28">
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="mb-4 text-sm font-semibold uppercase tracking-wider text-primary"
-        >
-          வாரம் மூன்று சொற்பொழிவுகள்
-        </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}

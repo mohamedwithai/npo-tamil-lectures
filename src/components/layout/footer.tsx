@@ -4,8 +4,8 @@ export function Footer() {
   return (
     <footer className="border-t bg-secondary/30">
       <div className="container flex flex-col items-center justify-between gap-4 py-8 text-sm text-muted-foreground sm:flex-row">
-        <p className="font-tamil">
-          © {new Date().getFullYear()} சொற்பொழிவுகள் — அறக்கட்டளை
+        <p>
+          © {new Date().getFullYear()} <span className="font-semibold text-foreground">Sirat</span> — a clear path to knowledge
         </p>
         <nav className="flex gap-4">
           <Link href="/lectures" className="hover:text-foreground">

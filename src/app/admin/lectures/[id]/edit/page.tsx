@@ -32,6 +32,7 @@ export default async function EditLecturePage({
     featuredImage: lecture.featuredImage ?? "",
     youtubeUrl: lecture.youtubeUrl ?? "",
     mindMapImage: lecture.mindMapImage ?? "",
+    category: lecture.category ?? "",
     status: lecture.status,
     featured: lecture.featured,
     verseIds: lecture.verses.map((v) => v.verseId),
