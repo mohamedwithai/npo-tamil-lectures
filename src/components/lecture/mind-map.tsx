@@ -41,7 +41,9 @@ type PNode = d3.HierarchyNode<MindMapNode> & {
   _children?: PNode[] | null;
 };
 
-function truncate(s: string, n = 30): string {
+// Single-line label, ellipsised if long. The full label is always available on
+// hover via the node's <title> tooltip.
+function truncate(s: string, n = 26): string {
   return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
 }
 
@@ -112,8 +114,12 @@ function D3MindMap({
       const root = rootRef.current;
       if (!root) return;
 
-      const dx = orientation === "vertical" ? 165 : 26;
-      const dy = orientation === "vertical" ? 110 : 220;
+      // Generous separation so single-line labels never collide. Vertical mode
+      // centres labels under nodes, so siblings need the most horizontal room;
+      // horizontal mode places labels beside nodes (one extends right, the next
+      // level's extends left into the same gap), so levels need wide gaps.
+      const dx = orientation === "vertical" ? 250 : 52;
+      const dy = orientation === "vertical" ? 140 : 360;
       d3.tree<MindMapNode>().nodeSize([dx, dy])(root);
 
       const nodes = root.descendants() as PNode[];
@@ -183,7 +189,9 @@ function D3MindMap({
               .attr("x", hasKids ? -9 : 9);
           }
         })
-        .text((d) => truncate(d.data.label));
+        // Horizontal labels extend sideways into the inter-level gap, so keep
+        // them shorter there; vertical labels sit under nodes with more room.
+        .text((d) => truncate(d.data.label, orientation === "vertical" ? 26 : 20));
 
       node.append("title").text((d) => d.data.label);
 

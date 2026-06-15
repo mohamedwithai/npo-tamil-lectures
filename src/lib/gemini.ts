@@ -6,6 +6,7 @@ import {
   type MindMapNode,
 } from "@/lib/mindmap";
 import { htmlToText } from "@/lib/utils";
+import { recordApiCall } from "@/lib/api-usage";
 
 // Free-tier Gemini model. Flash is fast, multilingual (good Tamil), and has a
 // generous free quota via an AI Studio key (https://aistudio.google.com/apikey).
@@ -53,6 +54,9 @@ async function generateWithGemini(
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  // We hit the Gemini endpoint below; track the outcome for the admin's API
+  // usage page (true = usable mind map returned, false = any failure).
+  let ok = false;
   try {
     const res = await fetch(`${ENDPOINT}?key=${key}`, {
       method: "POST",
@@ -81,12 +85,15 @@ async function generateWithGemini(
     const parsed = JSON.parse(extractJson(text)) as unknown;
     const tree = normalizeMindMap(parsed);
     // Require a non-trivial tree, else fall back to headings.
-    return tree && countNodes(tree) >= 3 ? tree : null;
+    const result = tree && countNodes(tree) >= 3 ? tree : null;
+    ok = result !== null;
+    return result;
   } catch (e) {
     console.warn("[gemini] mind map generation error:", (e as Error).message);
     return null;
   } finally {
     clearTimeout(timer);
+    await recordApiCall("gemini", ok);
   }
 }
 

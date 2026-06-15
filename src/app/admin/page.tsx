@@ -1,16 +1,18 @@
 import Link from "next/link";
-import { FileText, Users, Eye, ListChecks, Plus } from "lucide-react";
+import { FileText, Users, Eye, ListChecks, Plus, Activity } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getDashboardData } from "@/lib/analytics";
+import { getApiUsage } from "@/lib/api-usage";
 
 export default async function AdminDashboard() {
-  const data = await getDashboardData();
+  const [data, apiUsage] = await Promise.all([getDashboardData(), getApiUsage()]);
   const stats = [
     { label: "Total Users", value: data.totals.users, icon: Users },
     { label: "Lectures", value: data.totals.lectures, icon: FileText },
     { label: "Total Views", value: data.totals.views, icon: Eye },
     { label: "Quiz Participation", value: data.totals.quizParticipation, icon: ListChecks },
+    { label: "Gemini API Calls", value: apiUsage.gemini?.total ?? 0, icon: Activity },
   ];
 
   return (

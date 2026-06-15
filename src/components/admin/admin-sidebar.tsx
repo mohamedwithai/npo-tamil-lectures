@@ -9,6 +9,7 @@ import {
   ListChecks,
   BarChart3,
   MessageSquareWarning,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const items = [
   { href: "/admin/quizzes", label: "Quizzes", icon: ListChecks },
   { href: "/admin/suggestions", label: "Suggestions", icon: MessageSquareWarning },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/api-usage", label: "API Usage", icon: Activity },
 ];
 
 export function AdminSidebar({ newSuggestions = 0 }: { newSuggestions?: number }) {

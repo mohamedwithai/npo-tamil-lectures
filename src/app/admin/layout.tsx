@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/session";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { getNewSuggestionCount } from "@/lib/queries";
+import { getSuggestionCount } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // fast cookie pre-check.
   await requireAdmin();
 
-  const newSuggestions = await getNewSuggestionCount().catch(() => 0);
+  const newSuggestions = await getSuggestionCount().catch(() => 0);
 
   return (
     <div className="container flex flex-col gap-8 py-8 md:flex-row">

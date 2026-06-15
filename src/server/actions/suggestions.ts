@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin } from "@/lib/session";
 import { suggestionSchema } from "@/lib/validations";
 import { rateLimit } from "@/lib/rate-limit";
-import type { SuggestionStatus } from "@prisma/client";
+import { htmlToText } from "@/lib/utils";
 
 /**
  * Submit a correction suggestion for a lecture. Members only (we tie each
@@ -54,14 +54,74 @@ export async function createSuggestion(
   }
 }
 
-/** Admin: change a suggestion's status (reviewed / dismissed / reopen). */
-export async function updateSuggestionStatus(
+/**
+ * Admin: apply a correction to the actual lecture. Replaces the suggestion's
+ * original passage with `finalText` (which the admin may have tweaked) in the
+ * lecture content, refreshes the search text + mind map, and marks the
+ * suggestion reviewed. The public page then reflects the change.
+ */
+export async function applySuggestion(
   id: string,
-  status: SuggestionStatus
-): Promise<{ ok: boolean }> {
+  finalText: string
+): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const text = finalText.trim();
+  if (!text) return { ok: false, error: "The correction text is empty." };
+
+  try {
+    const s = await prisma.suggestion.findUnique({
+      where: { id },
+      select: { originalText: true, lectureId: true },
+    });
+    if (!s) return { ok: false, error: "Suggestion not found." };
+
+    const lecture = await prisma.lecture.findUnique({
+      where: { id: s.lectureId },
+      select: { content: true, titleTa: true, titleEn: true, slug: true },
+    });
+    if (!lecture) return { ok: false, error: "Lecture not found." };
+
+    if (!lecture.content.includes(s.originalText)) {
+      return {
+        ok: false,
+        error:
+          "The original passage wasn't found in the lecture (it may have changed or contains inline formatting). Please edit the lecture manually.",
+      };
+    }
+
+    // Replace the first occurrence of the original passage with the final text.
+    const newContent = lecture.content.replace(s.originalText, text);
+    const contentText = htmlToText(newContent);
+
+    // Note: we intentionally do NOT regenerate the mind map here. The mind map
+    // is generated once when the admin first posts the lecture; applying a
+    // reader correction must not re-call the NotebookLM/Gemini API.
+    await prisma.lecture.update({
+      where: { id: s.lectureId },
+      data: {
+        content: newContent,
+        contentText,
+      },
+    });
+    // Accepted: the change is now in the lecture, so remove the suggestion.
+    await prisma.suggestion.delete({ where: { id } });
+
+    revalidatePath(`/lectures/${lecture.slug}`);
+    revalidatePath("/");
+    revalidatePath("/lectures");
+    revalidatePath("/admin/suggestions");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not apply the correction." };
+  }
+}
+
+/** Admin: delete a suggestion (reject / cleanup) without changing the lecture. */
+export async function deleteSuggestion(id: string): Promise<{ ok: boolean }> {
   await requireAdmin();
   try {
-    await prisma.suggestion.update({ where: { id }, data: { status } });
+    await prisma.suggestion.delete({ where: { id } });
     revalidatePath("/admin/suggestions");
     revalidatePath("/admin");
     return { ok: true };

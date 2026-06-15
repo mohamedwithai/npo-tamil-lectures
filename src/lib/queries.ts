@@ -60,7 +60,7 @@ export async function getLectureBySlug(slug: string) {
 
 export async function getSuggestions() {
   return prisma.suggestion.findMany({
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    orderBy: { createdAt: "desc" },
     include: {
       lecture: { select: { slug: true, titleTa: true } },
       user: { select: { name: true, email: true } },
@@ -68,8 +68,8 @@ export async function getSuggestions() {
   });
 }
 
-export async function getNewSuggestionCount() {
-  return prisma.suggestion.count({ where: { status: "NEW" } });
+export async function getSuggestionCount() {
+  return prisma.suggestion.count();
 }
 
 export async function getAdminLectures() {
