@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useHighlights } from "./use-highlights";
+import { FrozenHtml } from "./frozen-html";
 import type { HighlightData } from "./highlight-utils";
 
 /** Renders article/content HTML with text-selection highlighting + notes. */
@@ -32,11 +33,7 @@ export function AnnotatableContent({
 
   return (
     <div className="relative">
-      <div
-        ref={ref}
-        className={cn("prose-lecture", className)}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <FrozenHtml ref={ref} html={html} className={cn("prose-lecture", className)} />
       {overlay}
     </div>
   );

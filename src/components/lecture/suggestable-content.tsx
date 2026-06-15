@@ -13,6 +13,7 @@ import {
 import { createSuggestion } from "@/server/actions/suggestions";
 import { cn } from "@/lib/utils";
 import { useHighlights } from "@/components/annotation/use-highlights";
+import { FrozenHtml } from "@/components/annotation/frozen-html";
 import type { HighlightData } from "@/components/annotation/highlight-utils";
 
 const BLOCK_SELECTOR = "p,li,h1,h2,h3,h4,h5,h6,blockquote";
@@ -40,6 +41,8 @@ export function SuggestableContent({
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [thanks, setThanks] = React.useState(false);
+  const activeRef = React.useRef(active);
+  activeRef.current = active;
 
   // Selection-highlighting + notes, suppressed while "suggest a correction"
   // mode is active to avoid conflicting click/selection behaviour.
@@ -51,19 +54,30 @@ export function SuggestableContent({
     initial: highlights,
   });
 
-  const onContentClick = React.useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!active) return;
-      const el = (e.target as HTMLElement).closest(BLOCK_SELECTOR);
-      if (!el || !ref.current?.contains(el)) return;
-      const text = (el.textContent ?? "").trim();
+  // The content node is frozen (React never re-renders it), so toggle the
+  // suggest-mode class imperatively.
+  React.useEffect(() => {
+    ref.current?.classList.toggle("suggest-active", active);
+  }, [active]);
+
+  // Suggest-mode block click — attached natively (reads `active` via ref) so it
+  // works on the frozen content node and coexists with the highlight listeners.
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    function onBlockClick(e: MouseEvent) {
+      if (!activeRef.current || !el) return;
+      const block = (e.target as HTMLElement).closest(BLOCK_SELECTOR);
+      if (!block || !el.contains(block)) return;
+      const text = (block.textContent ?? "").trim();
       if (!text) return;
       setError(null);
       setOriginal(text);
       setSuggested(text);
-    },
-    [active]
-  );
+    }
+    el.addEventListener("click", onBlockClick);
+    return () => el.removeEventListener("click", onBlockClick);
+  }, []);
 
   async function submit() {
     if (original == null) return;
@@ -122,12 +136,7 @@ export function SuggestableContent({
         </div>
       )}
 
-      <div
-        ref={ref}
-        onClick={onContentClick}
-        className={cn("prose-lecture", active && "suggest-active")}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <FrozenHtml ref={ref} html={html} className="prose-lecture" />
 
       {overlay}
 

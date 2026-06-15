@@ -118,6 +118,25 @@ export function findOffsets(
   return null;
 }
 
+/** Remove all <mark> elements for a highlight id, restoring their text. */
+export function unwrapMark(container: HTMLElement, id: string): void {
+  const marks = container.querySelectorAll(`mark[data-hl-id="${id}"]`);
+  marks.forEach((m) => {
+    const parent = m.parentNode;
+    if (!parent) return;
+    while (m.firstChild) parent.insertBefore(m.firstChild, m);
+    parent.removeChild(m);
+  });
+  container.normalize();
+}
+
+/** Update the colour class on all <mark> elements for a highlight id. */
+export function recolorMark(container: HTMLElement, id: string, color: string): void {
+  container
+    .querySelectorAll(`mark[data-hl-id="${id}"]`)
+    .forEach((m) => ((m as HTMLElement).className = `hl hl-${color}`));
+}
+
 /** Wrap a range in <mark> elements (one per intersected text node). */
 export function wrapRange(
   container: Node,

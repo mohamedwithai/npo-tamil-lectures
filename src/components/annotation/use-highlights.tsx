@@ -12,6 +12,8 @@ import {
   findOffsets,
   getRangeOffsets,
   rangeFromOffsets,
+  recolorMark,
+  unwrapMark,
   wrapRange,
   type HighlightData,
 } from "./highlight-utils";
@@ -22,9 +24,10 @@ type Anchor = { quote: string; prefix: string; suffix: string; start: number; en
 
 /**
  * Adds text-selection highlighting + per-passage notes to a content container
- * referenced by `containerRef`. Renders the stored highlights as <mark>s, shows
- * a selection toolbar (when `enabled`), and a note editor when a mark is
- * clicked. Returns the floating UI to render alongside the content.
+ * referenced by `containerRef` (which must be a "frozen" element React never
+ * reconciles). Highlights are applied incrementally — the live selection is
+ * wrapped on create, a single mark is unwrapped on delete — so the DOM is never
+ * reset and React never wipes the marks. Returns the floating UI to render.
  */
 export function useHighlights({
   containerRef,
@@ -40,29 +43,36 @@ export function useHighlights({
   initial: HighlightData[];
 }): { overlay: React.ReactNode } {
   const [highlights, setHighlights] = React.useState<HighlightData[]>(initial);
-  const [toolbar, setToolbar] = React.useState<{ x: number; y: number; anchor: Anchor } | null>(null);
+  const [toolbar, setToolbar] = React.useState<{
+    x: number;
+    y: number;
+    anchor: Anchor;
+    range: Range;
+  } | null>(null);
   const [editor, setEditor] = React.useState<{ id: string; x: number; y: number } | null>(null);
   const [draft, setDraft] = React.useState("");
   const [pending, setPending] = React.useState(false);
-  const cleanHtml = React.useRef<string | null>(null);
+
+  const highlightsRef = React.useRef(highlights);
+  highlightsRef.current = highlights;
   const enabledRef = React.useRef(enabled);
   enabledRef.current = enabled;
+  const appliedRef = React.useRef(false);
 
-  // Render highlights into the container. Captures the clean HTML on first run,
-  // then restores + re-marks whenever the highlight set changes.
+  // Apply the stored highlights to the DOM exactly once, after the container is
+  // available. (No re-render reset — later changes are applied incrementally.)
   React.useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
-    if (cleanHtml.current === null) cleanHtml.current = el.innerHTML;
-    else el.innerHTML = cleanHtml.current;
+    if (!el || appliedRef.current) return;
+    appliedRef.current = true;
     const text = el.textContent ?? "";
-    for (const h of highlights) {
+    for (const h of initial) {
       const off = findOffsets(text, h);
       if (!off) continue;
       const range = rangeFromOffsets(el, off.start, off.end);
       if (range) wrapRange(el, range, { id: h.id, color: h.color });
     }
-  }, [highlights, containerRef]);
+  }, [containerRef, initial]);
 
   // Selection → toolbar, and mark click → editor (only while enabled).
   React.useEffect(() => {
@@ -85,6 +95,7 @@ export function useHighlights({
       setToolbar({
         x: rect.left + rect.width / 2,
         y: Math.max(rect.top, 8),
+        range: range.cloneRange(),
         anchor: {
           quote,
           prefix: text.slice(Math.max(0, start - CONTEXT_LEN), start),
@@ -101,16 +112,12 @@ export function useHighlights({
       if (!mark) return;
       e.stopPropagation();
       const id = mark.dataset.hlId!;
-      setHighlights((hs) => {
-        const h = hs.find((x) => x.id === id);
-        if (h) {
-          const rect = mark.getBoundingClientRect();
-          setDraft(h.note);
-          setToolbar(null);
-          setEditor({ id, x: rect.left, y: rect.bottom + 6 });
-        }
-        return hs;
-      });
+      const h = highlightsRef.current.find((x) => x.id === id);
+      if (!h) return;
+      const rect = mark.getBoundingClientRect();
+      setToolbar(null);
+      setDraft(h.note);
+      setEditor({ id, x: rect.left, y: rect.bottom + 6 });
     }
 
     el.addEventListener("mouseup", onMouseUp);
@@ -136,6 +143,8 @@ export function useHighlights({
   async function addHighlight(openNote: boolean) {
     if (!toolbar) return;
     const a = toolbar.anchor;
+    const liveRange = toolbar.range;
+    const pos = { x: toolbar.x, y: toolbar.y + 18 };
     setPending(true);
     const res = await createHighlight({
       target,
@@ -149,12 +158,22 @@ export function useHighlights({
       note: "",
     });
     setPending(false);
-    window.getSelection()?.removeAllRanges();
-    const pos = { x: toolbar.x, y: toolbar.y + 18 };
     setToolbar(null);
+
     if (res.ok && res.id) {
+      const id = res.id;
+      // Paint immediately by wrapping the captured selection range.
+      const el = containerRef.current;
+      if (el) {
+        try {
+          wrapRange(el, liveRange, { id, color: "yellow" });
+        } catch {
+          /* anchoring fallback happens on next reload */
+        }
+      }
+      window.getSelection()?.removeAllRanges();
       const h: HighlightData = {
-        id: res.id,
+        id,
         quote: a.quote,
         prefix: a.prefix,
         suffix: a.suffix,
@@ -166,26 +185,32 @@ export function useHighlights({
       setHighlights((hs) => [...hs, h]);
       if (openNote) {
         setDraft("");
-        setEditor({ id: res.id, x: pos.x, y: pos.y });
+        setEditor({ id, x: pos.x, y: pos.y });
       }
+    } else {
+      window.getSelection()?.removeAllRanges();
     }
   }
 
   async function saveNote() {
     if (!editor) return;
+    const id = editor.id;
     setPending(true);
-    const res = await updateHighlight({ id: editor.id, note: draft });
+    const res = await updateHighlight({ id, note: draft });
     setPending(false);
     if (res.ok) {
-      setHighlights((hs) => hs.map((h) => (h.id === editor.id ? { ...h, note: draft } : h)));
+      setHighlights((hs) => hs.map((h) => (h.id === id ? { ...h, note: draft } : h)));
       setEditor(null);
     }
   }
 
   async function changeColor(color: string) {
     if (!editor) return;
-    await updateHighlight({ id: editor.id, color });
-    setHighlights((hs) => hs.map((h) => (h.id === editor.id ? { ...h, color } : h)));
+    const id = editor.id;
+    const el = containerRef.current;
+    if (el) recolorMark(el, id, color);
+    setHighlights((hs) => hs.map((h) => (h.id === id ? { ...h, color } : h)));
+    await updateHighlight({ id, color });
   }
 
   async function removeHighlight() {
@@ -195,6 +220,8 @@ export function useHighlights({
     const res = await deleteHighlight(id);
     setPending(false);
     if (res.ok) {
+      const el = containerRef.current;
+      if (el) unwrapMark(el, id);
       setHighlights((hs) => hs.filter((h) => h.id !== id));
       setEditor(null);
     }
